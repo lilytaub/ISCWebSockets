@@ -111,12 +111,12 @@ This method reads messages sent from the client (using the `Read` method of the 
 
 This chat application demonstrates how to establish WebSocket connections between a client and server hosted by InterSystems IRIS. To further explore developing applications that use WebSockets, you can implement the tracking of online users as described in the “Chat Application Overview” section of this tutorial.
 
-[wscreate]: https://github.com/lilytaub/ISCWebSockets/raw/master/Images/WS_create_connection.png "Create WebSocket Connection"
-[wsopen]: https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_onopen.png "Open WebSocket Connection"
-[wssend]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_send.png "Send data to server"
-[wsonmessage]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_onmessage.png "Client Receives Data"
-[wsonerror]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_onerror.png "Error Handling"
-[wsonclose]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_onclose.png "Close WebSocket Connection"
-[wsonpreserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/WS_preserver.png "OnPreServer Method"
-[wsserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/WS_server.png "Server Method"
-[wsprocmsg]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Images/ws_procmsg.png "Process incoming messages on the server"
+[wscreate]: https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_create_connection.png "Create WebSocket Connection"
+[wsopen]: https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onopen.png "Open WebSocket Connection"
+[wssend]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_send.png "Send data to server"
+[wsonmessage]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onmessage.png "Client Receives Data"
+[wsonerror]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onerror.png "Error Handling"
+[wsonclose]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onclose.png "Close WebSocket Connection"
+[wsonpreserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_preserver.png "OnPreServer Method"
+[wsserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_server.png "Server Method"
+[wsprocmsg]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/ws_procmsg.png "Process incoming messages on the server"
