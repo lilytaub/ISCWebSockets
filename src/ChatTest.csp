@@ -1,234 +1,231 @@
 <!doctype html>
-<script Language="Cache" runat="SERVER">
-s room=$G(%request.Data("room",1),"default")
 
-
-</script>
 <html class="no-js" lang="">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <title>Chatroom</title>
         <meta name="description" content="chatroom">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-        <link rel="apple-touch-icon" href="apple-touch-icon.png">    
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />    
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css"/>
-        
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
-        <script src="js/vendor/modernizr-2.8.3.min.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.11.3.min.js"><\/script>')</script>
-        
-        <script Language="Cache" runat="SERVER">
-        w "<script language=""javascript"">"
-        w "var ROOM='"_$G(room)_"';"
-        w "<"_"/script>"        
-       </script>
-       <script language="javascript">
-        var ws;
-        var nickname="unknown";
-
-	    if ((typeof(WebSocket) == 'undefined') &&
-	    	(typeof(MozWebSocket) != 'undefined')) {
-	    		WebSocket = MozWebSocket;
-	      }
-	    function init() {
-  
-	    	$(".textmsg").each(function(d){$(this).text(btoa($(this).text()));})
-	    	$("#chatdiv").animate({ scrollTop: $('#chatdiv').prop("scrollHeight")}, 1000);
-	    	$("#inputline").focus()
-	    	$('#inputline').keypress(function (e) {
-	    	if (e.which == 13) {
-	    		send();
-	    	}
-	    	});
-	    	ws = new WebSocket(((window.location.protocol == "https:") ? "wss:" : "ws:") + "//" + window.location.host + 
-	    		"/csp/user/Chat.Server.cls"+"?room="+ROOM);
-	    	
-	    	ws.onopen = function(event) {
-	    		document.getElementById("headline").innerHTML = "CHAT - connected";
-	    	};
-  
-
-  
-	    	ws.onmessage = function(event) {
-	    		var d=JSON.parse(event.data);
-	    		if (d.Type=="Chat") {
-	    			$("#chat").append(wrapmessage(d));
-	    			$("#chatdiv").animate({ scrollTop: $('#chatdiv').prop("scrollHeight")}, 1000);
-	    		} else if(d.Type=="userlist") {
-	    			var ul = document.getElementById("userlist");
-	    			while(ul.firstChild){ul.removeChild(ul.firstChild)};
-	    			$("#userlist").append(wrapuser(d.Users));
-	    		} else if(d.Type=="Status"){
-	    			document.getElementById("headline").innerHTML = "CHAT - connected - "+d.WSID;
-	    		}
-	    	};
-	    	
-	    	ws.onerror = function(event) {
-	    		document.GetElementById("headline").innerHTML = "CHAT - error";
-	    		alert("Received error"); 
-	    	 };
-	    	 
-  
-	    	ws.onclose = function(event) {
-	    		ws = null;
-	    		document.getElementById("headline").innerHTML = "CHAT - disconnected";
-	    	}
-	    }
-
-  function send() {
-
-    var line=$("#inputline").val();
-    if (line.substr(0,5)=="/nick"){
-      nickname=line.split(" ")[1];
-      if (nickname==""){
-        nickname="default";
-      }
-      var data = {}
-      data.User = nickname
-      ws.send(JSON.stringify(data));
+        <script language="javascript">
+          var ws;
+          var alias="unknown";
+          
+          if ((typeof(WebSocket) == 'undefined') &&(typeof(MozWebSocket) != 'undefined')) {
+          WebSocket = MozWebSocket;
+        }
+        /*
+         *Initialize the chat page
+         */ 
+        function init() {
+          $(".textmsg").each(function(d){$(this).text(btoa($(this).text()));})
+          $("#chatdiv").animate({ scrollTop: $('#chatdiv').prop("scrollHeight")}, 1000);
+          $("#inputline").focus()
+          
+          //If a user presses "Enter" while in the message input box, trigger the "send()" function
+          $('#inputline').keypress(function (e) {
+            if (e.which == 13) {
+              send();
+            }
+          });
+          /*creates a new WebSocket connection to the server, specified by /csp/user/ChatServer.cls
+           * for this command to work, both the client and server most be hosted by the same IRIS or Caché instance,
+           * as the host and port number are grabbed from the current browser (window.location.host)
+           */
+          ws = new WebSocket(((window.location.protocol == "https:") ? "wss:" : "ws:") + 
+                      "//" + window.location.host + 
+                      "/csp/user/Chat.Server.cls");
+          
+          //When the WebSocket connection is established, update the page's headline            
+          ws.onopen = function(event) {
+            document.getElementById("headline").innerHTML = "CHAT - connected";
+          };
+          /* When the WebSocket connection receives an incoming message, update the appropriate page 
+           * elements according to type of message. Formats the incoming messages using wrapuser()
+           * and wrapmessage() helper functions
+           */
+          ws.onmessage = function(event) {
+            var d=JSON.parse(event.data);
+            if (d.Type=="Chat") {
+              $("#chat").append(wrapmessage(d));
+              $("#chatdiv").animate({ scrollTop: $('#chatdiv').prop("scrollHeight")}, 1000);
+            } else if(d.Type=="userlist") {
+              var ul = document.getElementById("userlist");
+              while(ul.firstChild){ul.removeChild(ul.firstChild)};
+              $("#userlist").append(wrapuser(d.Users));
+            } else if(d.Type=="Status"){
+              document.getElementById("headline").innerHTML = "CHAT - connected - "+d.WSID;
+            }
+          };
+          
+          ws.onerror = function(event) {
+            document.GetElementById("headline").innerHTML = "CHAT - error";
+            alert("Received error"); 
+           };
+           
+          ws.onclose = function(event) {
+            ws = null;
+            document.getElementById("headline").innerHTML = "CHAT - disconnected";
+          }
+        }
+        /* 
+         * Sends messages to the server via the ws.send()
+         * If the data is not an alias update, encode the message using base64-enocding
+         */
+        function send() {
+          var line=$("#inputline").val();
+          if (line.substr(0,5)=="alias"){
+            alias=line.split(" ")[1];
+            if (alias==""){
+              alias="default";
+            }
+            var data = {}
+            data.User = alias
+            ws.send(JSON.stringify(data));
       
-    } else {
-      var msg=btoa(line);
-      var data={};
-      data.Message=msg;
-      data.Author=nickname;
-      if (ws && msg!="") {
-          ws.send(JSON.stringify(data));
+          }else {
+            var msg=btoa(line);
+            var data={};
+            data.Message=msg;
+            data.Author=alias;
+            if (ws && msg!="") {
+              ws.send(JSON.stringify(data));
+            }
+        }
+        $("#inputline").val("");
       }
-    }
-     $("#inputline").val("");
-
-  }
-  
-  function wrapmessage(data) {
-	  var html=[];
-	  html.push('<li class="media">');
-	  html.push('<div class="media-body">');
-	  html.push('<div class="media">');
-	  html.push('<p>'+data.Author+'</p>');
-	  html.push('<div class="media-body" >');
-	  html.push(atob(data.Message));
-	  html.push('<br />');
-	  html.push('<small class="text-muted">');
-	  html.push(data.Sent);
-	  html.push('</small><hr /></div></div></div></li>');
-	  return html.join("");
-  }
-  function wrapuser(data){
-    var html=[];
-    for (i=0;i<data.length;i++){
-    html.push('<li class="media">');
-    html.push('<div class="media-body">');
-    html.push('<p>');
-    html.push(data[i].User);
-    html.push('</p>');
-    html.push('</div></li>');
-    }
-  return html.join("");
-  }
-</script>
-       
-<style>
-html {
-    color: #222;
-    font-size: 1em;
-    line-height: 1.4;
-}
-::-moz-selection {
-    background: #b3d4fc;
-    text-shadow: none;
-}
-
-::selection {
-    background: #b3d4fc;
-    text-shadow: none;
-}
-
-hr {
-    display: block;
-    height: 1px;
-    border: 0;
-    border-top: 1px solid #ccc;
-    margin: 1em 0;
-    padding: 0;
-}
-
-
-fieldset {
-    border: 0;
-    margin: 0;
-    padding: 0;
-}
-
-
-textarea {
-    resize: vertical;
-}
-
-.hidden {
-    display: none !important;
-}
-
-.panel-body {
-  height:600px;
-  overflow: auto;
-}
-</style>
-</head>
-<body style="font-family:Verdana" onload="init();">
-  <div class="container">
-  	<div class="row " style="padding-top:40px;">
-	    <h3 class="text-center" id="headline" >CHAT </h3>
-	    <br /><br />
-	    <div class="col-md-8">
-	    	<div class="panel panel-info">
-	    		<div class="panel-heading">
-	    			RECENT CHAT HISTORY
-	    		</div>
-            <div id="chatdiv" class="panel-body">
-            	<ul id="chat" class="media-list">
-            	<script language="Cache" runat="Server">
-		          s sql=1
-		          s sql(1)="select Author,TimeStamp,Message from Chat.Message where Room->RoomNumber=? order by TimeStamp"
-		          
-		          s rset=##class(%SQL.Statement).%ExecDirect(,.sql,room)
-		          while (rset.%Next()){
-		            w "<li class=""media""><div class=""media-body""><div class=""media""><p>"_rset.%Get("Author")
-		            w "</p><div class=""media-body"">"
-		            w "<div class=""textmsg"">"
-		            w rset.%Get("Message")
-		            w "</div>"
-		            w "<br /><small class=""text-muted"">"_rset.%Get("TimeStamp")_"</small><hr /></div></div></div></li>"
-		          }
-		          d rset.%Close()
-		        </script>
-                </ul>
-            </div>
-            <div class="panel-footer">
+      /*
+       * Formats message data with html tags
+       */
+      function wrapmessage(data) {
+        var html=[];
+        html.push('<li class="media">');
+        html.push('<div class="media-body">');
+        html.push('<div class="media">');
+        html.push('<p>'+data.Author+'</p>');
+        html.push('<div class="media-body" >');
+        html.push(atob(data.Message));
+        html.push('<br />');
+        html.push('<small class="text-muted">');
+        html.push(data.Sent);
+        html.push('</small><hr /></div></div></div></li>');
+        return html.join("");
+      }
+      /*
+       * Formats user data with html tags
+       */
+      function wrapuser(data){
+          var html=[];
+          for (i=0;i<data.length;i++){
+          html.push('<li class="media">');
+          html.push('<div class="media-body">');
+          html.push('<p>');
+          html.push(data[i].User);
+          html.push('</p>');
+          html.push('</div></li>');
+          }
+        return html.join("");
+      }
+     </script>
+     <style>
+      html {
+          color: #222;
+          font-size: 1em;
+          line-height: 1.4;
+      }
+      ::-moz-selection {
+          background: #b3d4fc;
+          text-shadow: none;
+      }
+      
+      ::selection {
+          background: #b3d4fc;
+          text-shadow: none;
+      }
+      
+      hr {
+          display: block;
+          height: 1px;
+          border: 0;
+          border-top: 1px solid #ccc;
+          margin: 1em 0;
+          padding: 0;
+      }
+      
+      
+      fieldset {
+          border: 0;
+          margin: 0;
+          padding: 0;
+      }
+      
+      
+      textarea {
+          resize: vertical;
+      }
+      
+      .hidden {
+          display: none !important;
+      }
+      
+      .panel-body {
+        height:600px;
+        overflow: auto;
+      }
+     </style>
+  </head>
+  <body style="font-family:Verdana" onload="init();">
+    <div class="container">
+      <div class="row " style="padding-top:40px;">
+        <h3 class="text-center" id="headline" >CHAT </h3>
+        <br /><br />
+          <div class="col-md-8">
+            <div class="panel panel-info">
+              <div class="panel-heading">
+                RECENT CHAT HISTORY
+              </div>
+              <div id="chatdiv" class="panel-body">
+                <ul id="chat" class="media-list">
+                <script language="Cache" runat="Server">
+                   set sql=1
+                   set sql(1)="select Author,TimeStamp,Message from Chat.Message order by TimeStamp"
+                   set rset=##class(%SQL.Statement).%ExecDirect(,.sql)
+                   while (rset.%Next()){
+                      write "<li class=""media""><div class=""media-body""><div class=""media""><p>"_rset.%Get("Author")
+                      write "</p><div class=""media-body"">"
+                      write "<div class=""textmsg"">"
+                      write rset.%Get("Message")
+                      write "</div>"
+                      write "<br /><small class=""text-muted"">"_rset.%Get("TimeStamp")_"</small><hr /></div></div></div></li>"
+                    }
+                    do rset.%Close()
+                   </script>
+                   </ul>
+               </div>
+               <div class="panel-footer">
                 <div class="input-group">
-                	<input id="inputline" type="text" class="form-control" placeholder="Enter Message" />
-                		<span class="input-group-btn">
-                			<button class="btn btn-info" type="button" onclick="send();">SEND</button>
-                        </span>
+                  <input id="inputline" type="text" class="form-control" placeholder="Enter Message" />
+                  <span class="input-group-btn">
+                    <button class="btn btn-info" type="button" onclick="send();">SEND</button>
+                  </span>
                 </div>
-            </div>
+               </div>
+           </div>
         </div>
-    </div>
-    <div class="col-md-4">
-    	<div class="panel panel-primary">
-    		<div class="panel-heading">
-               ONLINE USERS
+        <div class="col-md-4">
+          <div class="panel panel-primary">
+            <div class="panel-heading">
+              ONLINE USERS
             </div>
             <div class="panel-body">
-                <ul id="userlist" class="media-list">
-                </ul>
+              <ul id="userlist" class="media-list"></ul>
             </div>
-        </div> 
-       </div>
+          </div> 
+        </div>
+      </div>
     </div>
-  </div>
-</body>
-
+  </body>
 </html>
