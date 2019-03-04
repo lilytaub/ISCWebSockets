@@ -38,85 +38,179 @@ The implementation of this chat application will achieve the following:
 The client side of our chat application is implemented by a CSP page containing the styling for the chat window, the declaration of the WebSocket connection, WebSocket events and methods that handle communication to and from the server, and helper functions that package messages sent to the server and process incoming messages.
 
 First, we’ll look at how the application initiates the WebSocket connection.
+```javascript
+    ws = new WebSocket(((window.location.protocol === "https:")? "wss:":"ws:")
+                    + "//"+ window.location.host + "/csp/user/Chat.Server.cls");
+```
 
-![alt text][wscreate]
+The `new` function creates a new instance of the WebSocket class. This opens a WebSocket connection to the server using the "wss” (indicates the use of TLS for the WebSocket communication channel) or “ws” protocol. The server is specified by the webserver port number and host name of the instance that defines the `Chat.Server` class (this information is contained in the `window.location.host` variable). The name of our server class (`Chat.Server.cls`) is included in the WebSocket opening URI as a GET request for a resource on the server. 
 
-The `new` function creates a new instance of the WebSocket class. This opens a WebSocket connection to the server using the "wss” (used if TCP communication is secured using SSL/TLS) or “ws” protocol. The server is specified by the webserver port number of the instance hosting the `Chat.Server` class (contained in the `window.location.host` variable) and the name of the server class. The `ws.onopen` event fires when the WebSocket connection is successfully established.
+The `ws.onopen` event fires when the WebSocket connection is successfully established, transitioning from a **_connecting_** to a **_open_** state.
 
-![alt text][wsopen]
+```javascript
+    ws.onopen = function(event){
+        document.getElementById("headline").innerHTML = "CHAT - CONNECTED";
+    };
+```
 
 This event updates the header of the chat window to indicate that the client and server are connected.
 
 ### *Sending Messages*
 
-When a user sends a message the client CSP page calls the `send`. This function serves as a wrapper around the `ws.send` method, which contains the mechanics for sending the client message to the server specified by the “ws” object.
+When a user sends a message the client CSP page calls the `send` function. This function serves as a wrapper around the `ws.send` method, which contains the mechanics for sending the client message to the server over the WebSocket connection.
 
-![alt text][wssend]
+```javascript
+function send() {
+	var line=$("#inputline").val();
+	if (line.substr(0,5)=="alias"){
+	    alias=line.split(" ")[1];
+		if (alias==""){
+		    alias="default";
+		}
+		var data = {}
+		data.User = alias
+		ws.send(JSON.stringify(data));
+        } else {
+	    var msg=btoa(line);
+	    var data={};
+	    data.Message=msg;
+	    data.Author=alias;
+	    if (ws && msg!="") {
+		    ws.send(JSON.stringify(data));
+	    }
+	}
+	$("#inputline").val("");
+}
+```
 
-The send function packages the information to be sent from client to the server in a JSON object, defining key/value pairs according to the type of information being sent (nickname update or general message). The `btoa` method translates the contents of a message into a base-64 encoded ASCII string.
+The send function packages the information to be sent to the server in a JSON object, defining key/value pairs according to the type of information being sent (alias update or general message). The `btoa` method translates the contents of a message into a base-64 encoded ASCII string.
 
 ### *Receiving Messages*
 
 When the client receives a message from the server, the `ws.onmessage` event is triggered.
 
-![alt text][wsonmessage]
+```javascript
+ws.onmessage = function(event) {
+	var d=JSON.parse(event.data);
+	if (d.Type=="Chat") {
+	    $("#chat").append(wrapmessage(d));
+            $("#chatdiv").animate({ scrollTop: $('#chatdiv').prop("scrollHeight")}, 1000);
+	} else if(d.Type=="userlist") {
+		var ul = document.getElementById("userlist");
+		while(ul.firstChild){ul.removeChild(ul.firstChild)};
+		$("#userlist").append(wrapuser(d.Users));
+	} else if(d.Type=="Status"){
+		document.getElementById("headline").innerHTML = "CHAT - connected - "+d.WSID;
+	}
+};
+```
 
 Depending on the type of message the client receives (“Chat”, “userlist”, or “status”), the `onmessage` event calls the `wrapmessage` or `wrapuser` to populate the appropriate sections of the chat window with the incoming data. If the incoming message is a status update the status header of the chat window is updated with the WebSocket ID.
 
 ### *Additional Client Components*
 
-When there is an error in the communication between the client and the server, the WebSocket `onerror` method is triggered.
+When there is an error in the communication between the client and the server, the WebSocket `onerror` method is triggered, which issues an alert that notifies us of the error and updates the page's status header.
 
-![alt text][wsonerror]
-
-This event issues an alert that let’s us know there’s been an error and updates the status header.
-
-The `onclose` method is triggered when the WebSocket connection between the client and server is closed.
-
-![alt text][wsonclose]
-
-The `onclose` event updates the status header again.
-
+```javascript
+ws.onerror = function(event) {
+	document.GetElementById("headline").innerHTML = "CHAT - error";
+	alert("Received error"); 
+};
+```
+The `onclose` method is triggered when the WebSocket connection between the client and server is closed and updates the status header.
+```javascript
+ws.onclose = function(event) {
+	ws = null;
+	document.getElementById("headline").innerHTML = "CHAT - disconnected";
+}
+```
 ## The Server
 
 The server side of the chat application is implemented by the `Chat.Server` class, which extends `%CSP.WebSocket`. Our server class inherits various properties and methods from `%CSP.WebSocket`, a few of which I’ll discuss below. The class also implements custom class methods to process messages from and broadcast messages to the client(s).
 
 ### *Before Starting the Server*
 
-The `OnPreServer()` is executed before the WebSocket server is created.
-
-![alt text][wsonpreserver]
-
-This method sets the `SharedConnection` class parameter to 1, indicating that our WebSocket connection will be asynchronous and utilized by multiple processes. The `SharedConnection` parameter can only be changed in the OnPreServer() method. `OnPreServer()` also stores the WebSocket ID associated with the client and corresponding room name in the `^ChatApp.WebSockets` and `^ChatApp.Room` globals respectively.
+`OnPreServer()` is executed before the WebSocket server is created and is inherited from the `%CSP.WebSocket` class.
+```
+Method OnPreServer() As %Status
+{
+    set ..SharedConnection=1
+    if (..WebSocketID '= ""){ 
+        set ^Chat.WebSocketConnections(..WebSocketID)=""
+    } else {
+        set ^Chat.Errors($INCREMENT(^Chat.Errors),"no websocketid defined")=$HOROLOG 
+    }
+    Quit $$$OK
+}
+```
+This method sets the `SharedConnection` class parameter to 1, indicating that our WebSocket connection will be asynchronous and supported by multiple processes. The `SharedConnection` parameter can only be changed in the OnPreServer() method. `OnPreServer()` also stores the WebSocket ID associated with the client in the `^Chat.WebSocketConnections` global.
 
 ### *The Server Method*
 
 The main body of logic executed by the server is contained in the `Server()` method.
-
-![alt text][wsserver]
-
-This method reads messages sent from the client (using the `Read` method of the `%CSP.WebSockets` class), adds the received JSON objects to the `^ChatApp.Message` global, and calls the `ProcessMessage()` method to forward the message to all other connected chat windows. When a user closes their chat window (thus terminating the WebSocket connection between that client and the server) the `Server()` method’s call to `Read` returns an error code that evaluates to the macro `$$$CSPWebSocketClosed` and the method proceeds to handle the closure accordingly.
+```
+Method Server() As %Status
+{
+    do ..StatusUpdate(..WebSocketID)
+    for {		
+        set data=..Read(.size,.sc,1) 
+        if ($$$ISERR(sc)){
+            if ($$$GETERRORCODE(sc)=$$$CSPWebSocketTimeout) {
+                //$$$DEBUG("no data")
+      	    }
+            if ($$$GETERRORCODE(sc)=$$$CSPWebSocketClosed){
+                kill ^Chat.WebSocketConnections(..WebSocketID)
+                do ..RemoveUser($g(^Chat.Users(..WebSocketID)))	
+                kill ^Chat.Users(..WebSocketID)
+                quit  // Client closed WebSocket
+            }
+        } else{
+            if data["User"{
+                do ..AddUser(data,..WebSocketID)
+            } else {
+                set mid=$INCREMENT(^Chat.Messages)
+                set ^Chat.Messages(mid)=data
+                do ..ProcessMessage(mid)
+            }
+        }
+    }
+    Quit $$$OK
+}
+```
+This method reads incoming messages from the client (using the `Read` method of the `%CSP.WebSockets` class), adds the received JSON objects to the `^Chat.Messages` global, and calls the `ProcessMessage()` method to forward the message to all other connected chat clients. When a user closes their chat window (thus terminating their WebSocket connection to the server), the `Server()` method’s call to `Read` returns an error code that evaluates to the macro `$$$CSPWebSocketClosed` and the method proceeds to handle the closure accordingly.
 
 ### *Processing and Distributing Messages*
 
-'ProcessMessage()' adds metadata to the incoming chat message and forwards it along to all the other connected chat application clients.
+`ProcessMessage()` adds metadata to the incoming chat message and calls `SendData()`, passing the message as a parameter. `SendData()` sends out the message to all the other connected chat clients.
+```
+ClassMethod ProcessMessage(mid As %String)
+{
+    set msg = ##class(%DynamicObject).%FromJSON($GET(^Chat.Messages(mid)))
+    set msg.Type="Chat"
+    set msg.Sent=$ZDATETIME($HOROLOG,3)
+    do ..SendData(msg)
+}
+```
 
-![alt text][wsprocmsg]
 
-`ProcessMessage()` retrieves the incoming chat message from the `^ChatApp.Message` global by the message’s assigned messaged ID (`mid`). This global stores the message and associated data in JSON format, as that is how we are sending and receiving data across our connection to the chat clients. We then user the `%DynamicObject` class to create an IRIS object from the JSON string, allowing us to edit the data before we broadcast the message back to all other connected chat clients. We add a `Type` attribute with the value “Chat,” which the chat client will read in determining how to deal with the incoming message.
-
-`ProcessMessage()` converts the IRIS object back into a JSON string (using the `%ToJSON` method of the `%DynamicObject` class) and pushes out the message to the rest of the chat clients. This is done by getting the WebSocket ID of each client-server connection from the `^ChatApp.WebSockets` global and using the IDs to open a WebSocket server connection (via the `OpenServer` method of the `%CSP.WebSocket` class) to the client. This is possible because our server class implements WebSockets asynchronously – we pull from the existing pool of IRIS-Web Gateway connections and assign it the WebSocket ID that identifies the server’s connection to a specific chat client. Finally, the `Write()` WebSocket method pushes the JSON string representation of the message to the client.
+`ProcessMessage()` retrieves the JSON formatted message from teh `^Chat.Messages` global and converts it to an InterSystems IRIS object using the `%DynamicObject` class' `%FromJSON`. This allows us to easily edit the data before we send the message out to all other connected chat clients. We add a `Type` attribute with the value “Chat,” which the client will use to determine how to deal with the incoming message.
+```
+ClassMethod SendData(data As %DynamicObject)
+{
+    set c = ""
+    for {
+        set c = $order(^Chat.WebSocketConnections(c))
+        if c="" Quit
+        set ws = ..%New()
+        set sc = ws.OpenServer(c)
+        if $$$ISERR(sc) { do ..HandleError(c,"open") } 
+        set sc = ws.Write(data.%ToJSON())
+        if $$$ISERR(sc) { do ..HandleError(c,"write") }
+    }
+}
+```
+`SendData()` converts the InterSystems IRIS object back into a JSON string (using the `%ToJSON` method of the `%DynamicObject` class) and pushes the message to all the chat clients. `SendData()` gets the WebSocket ID associated with each client-server connection from the `^Chat.WebSocketConnections` global and uses the ID to open a WebSocket connection via the `OpenServer` method of the `%CSP.WebSocket` class. We can use the `OpenServer` method to do this because our WebSocket connections are asynchronous – we pull from the existing pool of IRIS-Web Gateway processes and assign one the WebSocket ID that identifies the server’s connection to a specific chat client. Finally, the `Write()` WebSocket method pushes the JSON string representation of the message to the client.
 
 ## Conclustion
 
-This chat application demonstrates how to establish WebSocket connections between a client and server hosted by InterSystems IRIS. To further explore developing applications that use WebSockets, you can implement the tracking of online users as described in the “Chat Application Overview” section of this tutorial.
-
-[wscreate]: https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_create_connection.png "Create WebSocket Connection"
-[wsopen]: https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onopen.png "Open WebSocket Connection"
-[wssend]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_send.png "Send data to server"
-[wsonmessage]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onmessage.png "Client Receives Data"
-[wsonerror]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onerror.png "Error Handling"
-[wsonclose]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_onclose.png "Close WebSocket Connection"
-[wsonpreserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_preserver.png "OnPreServer Method"
-[wsserver]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/WS_server.png "Server Method"
-[wsprocmsg]:https://raw.githubusercontent.com/lilytaub/ISCWebSockets/master/Article/ws_procmsg.png "Process incoming messages on the server"
+This chat application demonstrates how to establish WebSocket connections between a client and server hosted by InterSystems IRIS. To continue practicing developing applications that use WebSockets, you can implement the tracking of online users as described in the “Chat Application Overview” section of this tutorial.
