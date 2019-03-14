@@ -43,7 +43,7 @@ First, we’ll look at how the application initiates the WebSocket connection.
                     + "//"+ window.location.host + "/csp/user/Chat.Server.cls");
 ```
 
-The `new` function creates a new instance of the WebSocket class. This opens a WebSocket connection to the server using the "wss” (indicates the use of TLS for the WebSocket communication channel) or “ws” protocol. The server is specified by the webserver port number and host name of the instance that defines the `Chat.Server` class (this information is contained in the `window.location.host` variable). The name of our server class (`Chat.Server.cls`) is included in the WebSocket opening URI as a GET request for a resource on the server. 
+The `new` function creates a new instance of the WebSocket class. This opens a WebSocket connection to the server using the "wss” (indicates the use of TLS for the WebSocket communication channel) or “ws” protocol. The server is specified by the web server port number and host name of the instance that defines the `Chat.Server` class (this information is contained in the `window.location.host` variable). The name of our server class (`Chat.Server.cls`) is included in the WebSocket opening URI as a GET request for a resource on the server. 
 
 The `ws.onopen` event fires when the WebSocket connection is successfully established, transitioning from a **_connecting_** to a **_open_** state.
 
@@ -211,6 +211,6 @@ ClassMethod SendData(data As %DynamicObject)
 ```
 `SendData()` converts the InterSystems IRIS object back into a JSON string (using the `%ToJSON` method of the `%DynamicObject` class) and pushes the message to all the chat clients. `SendData()` gets the WebSocket ID associated with each client-server connection from the `^Chat.WebSocketConnections` global and uses the ID to open a WebSocket connection via the `OpenServer` method of the `%CSP.WebSocket` class. We can use the `OpenServer` method to do this because our WebSocket connections are asynchronous – we pull from the existing pool of IRIS-Web Gateway processes and assign one the WebSocket ID that identifies the server’s connection to a specific chat client. Finally, the `Write()` WebSocket method pushes the JSON string representation of the message to the client.
 
-## Conclustion
+## Conclusion
 
 This chat application demonstrates how to establish WebSocket connections between a client and server hosted by InterSystems IRIS. To continue practicing developing applications that use WebSockets, you can implement the tracking of online users as described in the “Chat Application Overview” section of this tutorial.
