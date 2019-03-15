@@ -30,7 +30,7 @@ The implementation of this chat application will achieve the following:
 
 * Online users will appear in the “Online Users” list of all open chat windows
 
-* Users can change their “nickname” by composing a message starting with the “/nick” keyword and this message will not be broadcast but will update the “Online Users” list
+* Users can change their username by composing a message starting with the “alias” keyword and this message will not be broadcast but will update the “Online Users” list
 
 * When users close their chat window they will be removed from the “Online Users” list
 
