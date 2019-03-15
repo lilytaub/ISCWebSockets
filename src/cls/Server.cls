@@ -13,13 +13,13 @@ Method OnPreServer() As %Status
 		//The ^Chat.Errors global records error information related to creating, opening, or writing to a WebSocket connection
 		set ^Chat.Errors($INCREMENT(^Chat.Errors),"no websocketid defined")=$HOROLOG 
 	}
-	Quit $$$OK
+	quit $$$OK
 }
 
 /// The WebSocket Server.  Use the <Method>Read</Method> and <Method>Write</Method> methods
 /// to receive data from, and send data to, the client.
 /// Call the <Method>EndServer</Method> method to gracefully terminate the WebSocket Server.
-/// A WebSocket operating asynchronously (<property>SharedConnection=1</property>) can exit this method (using <b>Quit</B>) and subsequently open the WebSocket using the <Method>OpenServer</Method> method.
+/// A WebSocket operating asynchronously (<property>SharedConnection=1</property>) can exit this method (using <b>quit</B>) and subsequently open the WebSocket using the <Method>OpenServer</Method> method.
 Method Server() As %Status
 {
 	do ..StatusUpdate(..WebSocketID)
@@ -46,7 +46,7 @@ Method Server() As %Status
 		 }
 	 }
 	}
-	Quit $$$OK
+	quit $$$OK
 }
 ///Sends a status update to the client corresponding to the <property>wsid</property> input (WebSocket connection ID) through
 ///the WebSocket connection.
@@ -77,7 +77,7 @@ ClassMethod AddUser(data As %String, wid As %String)
 	if '$data(^Chat.UserUpdates){
 		set cu = "[]"
 	}else{
-		s cu = $g(^Chat.UserUpdates)
+		set cu = $g(^Chat.UserUpdates)
 	}
 	
 	set nu = ##class(%DynamicObject).%FromJSON(data)
@@ -133,7 +133,7 @@ ClassMethod SendData(data As %DynamicObject)
 	set c = ""
 	for {
 		set c = $order(^Chat.WebSocketConnections(c))
-		if c="" Quit
+		if c="" quit
 		set ws = ..%New()
 		set sc = ws.OpenServer(c)
 		if $$$ISERR(sc) { do ..HandleError(c,"open") } 
