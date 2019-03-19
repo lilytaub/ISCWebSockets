@@ -34,7 +34,7 @@ The implementation of this chat application will achieve the following:
 
 * When users close their chat window they will be removed from the “Online Users” list
 
-For the chat application source code, please visit this [Github repository](https://github.com/intersystems/InterSystems-WebSockets).
+For the chat application source code, please visit this [GitHub repository](https://github.com/intersystems/InterSystems-WebSockets).
 
 ## The Client
 The client side of our chat application is implemented by a CSP page containing the styling for the chat window, the declaration of the WebSocket connection, WebSocket events and methods that handle communication to and from the server, and helper functions that package messages sent to the server and process incoming messages.
